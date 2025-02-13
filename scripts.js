@@ -1,101 +1,105 @@
-// Remove the "not-loaded" class after 1 second
-window.onload = () => {
-  setTimeout(() => {
-    document.body.classList.remove("not-loaded");
-  }, 1000);
-};
+// Universal Audio Handler
+const audioHandler = (() => {
+  const audioElement = document.getElementById('bgMusic');
+  const songTitleElement = document.getElementById('song-title');
+  let isPlaying = false;
+  let userInteracted = false;
 
-// Music functionality - Modified for single track
-const audioElement = document.getElementById("bgMusic");
-const songTitleElement = document.getElementById("song-title");
-
-if (!audioElement) {
-  console.error("Audio element with ID 'bgMusic' not found.");
-} else {
-  // Set fixed music file
   const musicFile = {
     name: "Troye Sivan - 10/10",
     file: "music/10troye.mp3"
   };
 
-  function updateSong() {
+  const initAudio = () => {
     audioElement.src = musicFile.file;
-    songTitleElement.innerText = `Track: ${musicFile.name}`;
-    
-    // Set start time when metadata is loaded
-    const onLoaded = () => {
+    audioElement.preload = 'metadata';
+    audioElement.volume = 0.5;
+    songTitleElement.textContent = `Track: ${musicFile.name}`;
+
+    audioElement.addEventListener('loadedmetadata', () => {
       if (audioElement.duration > 30) {
         audioElement.currentTime = 30;
       }
-      audioElement.removeEventListener('loadedmetadata', onLoaded);
-    };
-    audioElement.addEventListener('loadedmetadata', onLoaded);
-  }
+    });
 
-  // Set initial song and title
-  updateSong();
+    audioElement.addEventListener('timeupdate', () => {
+      if (audioElement.currentTime >= audioElement.duration - 1) {
+        audioElement.currentTime = 30;
+        if (isPlaying) audioElement.play();
+      }
+    });
 
-  audioElement.addEventListener("ended", () => {
-    audioElement.currentTime = 30;
-    audioElement.play();
-  });
+    audioElement.addEventListener('error', (e) => {
+      console.error('Audio error:', e);
+    });
+  };
 
-  // Ensure autoplay works on first click
-  audioElement.volume = 0.5;
-  document.addEventListener("click", () => {
-    if (audioElement.paused) {
-      audioElement.play().then(() => {
-        if (audioElement.currentTime < 31) {
-          audioElement.currentTime = 31;
-        }
-      }).catch(err => console.error("Audio play failed:", err));
+  const startPlayback = () => {
+    if (!userInteracted) return;
+    
+    audioElement.play().then(() => {
+      if (audioElement.currentTime < 30) {
+        audioElement.currentTime = 30;
+      }
+      isPlaying = true;
+    }).catch((e) => {
+      console.log('Playback failed:', e);
+    });
+  };
+
+  const handleUserInteraction = () => {
+    if (!userInteracted) {
+      userInteracted = true;
+      document.removeEventListener('click', handleUserInteraction);
+      document.removeEventListener('touchstart', handleUserInteraction);
+      startPlayback();
     }
-  }, { once: true });
-}
+  };
 
-// Create fireflies clustered around a center
-function createFireflies(numFireflies = 20) {
-  let container = document.querySelector('.fireflies');
-  if (!container) {
-    container = document.createElement('div');
-    container.classList.add('fireflies');
+  // Public API
+  return {
+    init: () => {
+      initAudio();
+      document.addEventListener('click', handleUserInteraction);
+      document.addEventListener('touchstart', handleUserInteraction);
+    },
+    togglePlayback: () => {
+      isPlaying = !isPlaying;
+      isPlaying ? audioElement.play() : audioElement.pause();
+    }
+  };
+})();
+
+// Fireflies System
+const createFireflies = (() => {
+  const createParticles = (num = 35) => {
+    const container = document.querySelector('.fireflies') || document.createElement('div');
+    container.className = 'fireflies';
     document.body.appendChild(container);
-  }
 
-  container.innerHTML = "";
+    for (let i = 0; i < num; i++) {
+      const firefly = document.createElement('div');
+      firefly.className = 'firefly';
+      
+      const centerX = 50;
+      const centerY = 70;
+      const radius = Math.random() * 30;
+      const angle = Math.random() * 2 * Math.PI;
+      
+      firefly.style.setProperty('--x', `${centerX + radius * Math.cos(angle)}%`);
+      firefly.style.setProperty('--y', `${centerY + radius * Math.sin(angle)}%`);
+      firefly.style.setProperty('--d', `${(Math.random() * 3 + 2).toFixed(1)}s`);
+      firefly.style.setProperty('--delay', `${(Math.random() * 3).toFixed(1)}s`);
 
-  const centerX = 50;
-  const centerY = 70;
+      container.appendChild(firefly);
+    }
+  };
 
-  for (let i = 0; i < numFireflies; i++) {
-    const firefly = document.createElement('div');
-    firefly.classList.add('firefly');
+  return { init: createParticles };
+})();
 
-    const maxRadius = 30;
-    const radius = Math.random() * maxRadius;
-    const angle = Math.random() * 2 * Math.PI;
-    const offsetX = radius * Math.cos(angle);
-    const offsetY = radius * Math.sin(angle);
-
-    let posX = Math.max(0, Math.min(100, centerX + offsetX));
-    let posY = Math.max(0, Math.min(100, centerY + offsetY));
-
-    const duration = (Math.random() * 3 + 2).toFixed(1) + 's';
-    const delay = (Math.random() * 3).toFixed(1) + 's';
-
-    firefly.style.setProperty('--x', `${posX}%`);
-    firefly.style.setProperty('--y', `${posY}%`);
-    firefly.style.setProperty('--d', duration);
-    firefly.style.setProperty('--delay', delay);
-
-    container.appendChild(firefly);
-  }
-}
-
-document.addEventListener('DOMContentLoaded', () => {
-  createFireflies(40);
-
-  // Typewriter effect for messages
+// Text Animation System
+const textAnimator = (() => {
   const messages = [
     "hey pookie, <3",
     "happy valentine’s day.",
@@ -105,42 +109,46 @@ document.addEventListener('DOMContentLoaded', () => {
     "you mean so much to me."
   ];
 
-  let index = 0;
-  let charIndex = 0;
-  const speed = 50;
-  const delayBetweenMessages = 1500;
-  const messageContainer = document.querySelector(".text");
+  const initAnimation = () => {
+    const messageContainer = document.querySelector(".text");
+    let index = 0;
+    let charIndex = 0;
+    const speed = 50;
 
-  if (!messageContainer) {
-    console.error("Message container not found");
-    return;
-  }
-
-  function typeWriter() {
-    if (index < messages.length) {
-      if (charIndex < messages[index].length) {
-        messageContainer.textContent += messages[index].charAt(charIndex);
-        charIndex++;
-        setTimeout(typeWriter, speed);
-      } else {
-        if (index < messages.length - 1) {
+    const typeWriter = () => {
+      if (index < messages.length) {
+        if (charIndex < messages[index].length) {
+          messageContainer.textContent += messages[index][charIndex];
+          charIndex++;
+          setTimeout(typeWriter, speed);
+        } else if (index < messages.length - 1) {
           setTimeout(() => {
             messageContainer.textContent = "";
             charIndex = 0;
             index++;
             typeWriter();
-          }, delayBetweenMessages);
+          }, 1500);
         }
       }
-    }
-  }
+    };
 
-  const handleAnimationEnd = (e) => {
-    if (e.animationName === "fadeIn") {
-      typeWriter();
-      messageContainer.removeEventListener("animationend", handleAnimationEnd);
-    }
+    messageContainer.addEventListener("animationend", typeWriter);
   };
 
-  messageContainer.addEventListener("animationend", handleAnimationEnd);
+  return { init: initAnimation };
+})();
+
+// Initialize all systems
+document.addEventListener('DOMContentLoaded', () => {
+  audioHandler.init();
+  createFireflies.init();
+  textAnimator.init();
+  document.body.classList.remove("not-loaded");
+});
+
+// Pause audio when tab is hidden
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) {
+    audioHandler.togglePlayback();
+  }
 });
