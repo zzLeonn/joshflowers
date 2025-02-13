@@ -71,7 +71,7 @@ function createFireflies(numFireflies = 20) {
     const firefly = document.createElement('div');
     firefly.classList.add('firefly');
 
-    const maxRadius = 15;
+    const maxRadius = 30;
     const radius = Math.random() * maxRadius;
     const angle = Math.random() * 2 * Math.PI;
     const offsetX = radius * Math.cos(angle);
@@ -93,7 +93,7 @@ function createFireflies(numFireflies = 20) {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-  createFireflies(20);
+  createFireflies(40);
 
   // Typewriter effect for messages
   const messages = [
