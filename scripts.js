@@ -1,67 +1,58 @@
-// Remove the "not-loaded" class after 1 second
-window.onload = () => {
-  setTimeout(() => {
-    document.body.classList.remove("not-loaded");
-  }, 1000);
-};
-
-// Music functionality - Modified for single track
+// Audio initialization
 const audioElement = document.getElementById("bgMusic");
 const songTitleElement = document.getElementById("song-title");
+let audioInitialized = false;
 
-if (!audioElement) {
-  console.error("Audio element with ID 'bgMusic' not found.");
-} else {
-  // Set fixed music file
+function initializeAudio() {
   const musicFile = {
     name: "Troye Sivan - 10/10",
     file: "music/10troye.mp3"
   };
 
-  function updateSong() {
-    audioElement.src = musicFile.file;
-    songTitleElement.innerText = `Track: ${musicFile.name}`;
-    
-    // Set start time when metadata is loaded
-    const onLoaded = () => {
-      if (audioElement.duration > 30) {
-        audioElement.currentTime = 30;
-      }
-      audioElement.removeEventListener('loadedmetadata', onLoaded);
-    };
-    audioElement.addEventListener('loadedmetadata', onLoaded);
-  }
-
-  // Set initial song and title
-  updateSong();
-
-  audioElement.addEventListener("ended", () => {
-    audioElement.currentTime = 30;
-    audioElement.play();
-  });
-
-  // Ensure autoplay works on first click
-  audioElement.volume = 0.5;
-  document.addEventListener("click", () => {
-    if (audioElement.paused) {
-      audioElement.play().then(() => {
-        if (audioElement.currentTime < 31) {
-          audioElement.currentTime = 31;
-        }
-      }).catch(err => console.error("Audio play failed:", err));
+  audioElement.src = musicFile.file;
+  audioElement.load();
+  
+  const setStartTime = () => {
+    if (audioElement.readyState > 0 && audioElement.duration > 30) {
+      audioElement.currentTime = 30;
     }
-  }, { once: true });
+  };
+
+  audioElement.addEventListener('loadedmetadata', setStartTime);
+  audioElement.addEventListener('canplaythrough', setStartTime);
+  songTitleElement.innerText = `Track: ${musicFile.name}`;
 }
 
-// Create fireflies clustered around a center
-function createFireflies(numFireflies = 20) {
-  let container = document.querySelector('.fireflies');
-  if (!container) {
-    container = document.createElement('div');
-    container.classList.add('fireflies');
-    document.body.appendChild(container);
+function startAudio() {
+  if (!audioInitialized) {
+    initializeAudio();
+    audioInitialized = true;
   }
+  
+  audioElement.play().then(() => {
+    if (audioElement.currentTime < 30) {
+      audioElement.currentTime = 30;
+    }
+  }).catch(err => {
+    console.log("Audio play requires user interaction");
+  });
+}
 
+document.addEventListener('click', () => {
+  startAudio();
+  document.removeEventListener('click', startAudio);
+}, { once: true });
+
+audioElement.addEventListener("ended", () => {
+  audioElement.currentTime = 30;
+  audioElement.play();
+});
+
+// Fireflies initialization
+function createFireflies(numFireflies = 40) {
+  const container = document.querySelector('.fireflies') || document.createElement('div');
+  container.classList.add('fireflies');
+  document.body.appendChild(container);
   container.innerHTML = "";
 
   const centerX = 50;
@@ -71,31 +62,22 @@ function createFireflies(numFireflies = 20) {
     const firefly = document.createElement('div');
     firefly.classList.add('firefly');
 
-    const maxRadius = 30;
-    const radius = Math.random() * maxRadius;
+    const radius = Math.random() * 30;
     const angle = Math.random() * 2 * Math.PI;
-    const offsetX = radius * Math.cos(angle);
-    const offsetY = radius * Math.sin(angle);
-
-    let posX = Math.max(0, Math.min(100, centerX + offsetX));
-    let posY = Math.max(0, Math.min(100, centerY + offsetY));
-
-    const duration = (Math.random() * 3 + 2).toFixed(1) + 's';
-    const delay = (Math.random() * 3).toFixed(1) + 's';
+    const posX = Math.max(0, Math.min(100, centerX + radius * Math.cos(angle)));
+    const posY = Math.max(0, Math.min(100, centerY + radius * Math.sin(angle)));
 
     firefly.style.setProperty('--x', `${posX}%`);
     firefly.style.setProperty('--y', `${posY}%`);
-    firefly.style.setProperty('--d', duration);
-    firefly.style.setProperty('--delay', delay);
+    firefly.style.setProperty('--d', `${(Math.random() * 3 + 2).toFixed(1)}s`);
+    firefly.style.setProperty('--delay', `${(Math.random() * 3).toFixed(1)}s`);
 
     container.appendChild(firefly);
   }
 }
 
-document.addEventListener('DOMContentLoaded', () => {
-  createFireflies(40);
-
-  // Typewriter effect for messages
+// Text animation
+function initTextAnimation() {
   const messages = [
     "hey pookie, <3",
     "happy valentine’s day.",
@@ -108,13 +90,7 @@ document.addEventListener('DOMContentLoaded', () => {
   let index = 0;
   let charIndex = 0;
   const speed = 50;
-  const delayBetweenMessages = 1500;
   const messageContainer = document.querySelector(".text");
-
-  if (!messageContainer) {
-    console.error("Message container not found");
-    return;
-  }
 
   function typeWriter() {
     if (index < messages.length) {
@@ -122,25 +98,23 @@ document.addEventListener('DOMContentLoaded', () => {
         messageContainer.textContent += messages[index].charAt(charIndex);
         charIndex++;
         setTimeout(typeWriter, speed);
-      } else {
-        if (index < messages.length - 1) {
-          setTimeout(() => {
-            messageContainer.textContent = "";
-            charIndex = 0;
-            index++;
-            typeWriter();
-          }, delayBetweenMessages);
-        }
+      } else if (index < messages.length - 1) {
+        setTimeout(() => {
+          messageContainer.textContent = "";
+          charIndex = 0;
+          index++;
+          typeWriter();
+        }, 1500);
       }
     }
   }
 
-  const handleAnimationEnd = (e) => {
-    if (e.animationName === "fadeIn") {
-      typeWriter();
-      messageContainer.removeEventListener("animationend", handleAnimationEnd);
-    }
-  };
+  messageContainer.addEventListener("animationend", () => typeWriter());
+}
 
-  messageContainer.addEventListener("animationend", handleAnimationEnd);
+// Initialize everything
+document.addEventListener('DOMContentLoaded', () => {
+  createFireflies();
+  initTextAnimation();
+  document.body.classList.remove("not-loaded");
 });
